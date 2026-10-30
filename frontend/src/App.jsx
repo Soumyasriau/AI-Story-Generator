@@ -1,4 +1,4 @@
-﻿
+
 import { useState } from 'react'
 import './App.css'
 
@@ -43,7 +43,7 @@ function App() {
     <div className="app">
       <nav className="navbar">
         <a className="brand" href="#">
-          <span className="brand-icon">âœ¦</span>
+          <span className="brand-icon">{"\u2728"}</span>
           StoryLearn <span>AI</span>
         </a>
         <a href="#about" className="nav-link">About</a>
@@ -51,7 +51,7 @@ function App() {
 
       <main>
         <section className="hero">
-          <div className="eyebrow">âœ¦ YOUR PERSONAL AI LEARNING COMPANION</div>
+          <div className="eyebrow">{"\u2728"} YOUR PERSONAL AI LEARNING COMPANION</div>
 
           <h1>
             Learn anything.
@@ -75,10 +75,10 @@ function App() {
                 placeholder="e.g. Artificial Intelligence, Photosynthesis..."
               />
               <button onClick={generateStory} disabled={loading}>
-                {loading ? 'Generating...' : 'Generate Story â†’'}
+                {loading ? 'Generating...' : 'Generate Story'}
               </button>
             </div>
-            <p className="hint">âœ¨ Enter any topic and let AI explain it through a story.</p>
+            <p className="hint">{"\u2728"} Enter any topic and let AI explain it through a story.</p>
           </div>
 
           {loading && (
@@ -119,16 +119,16 @@ function App() {
 
             {story.key_points?.length > 0 && (
               <article className="result-card">
-                <h3>â­ Key Takeaways</h3>
+                <h3>Key Points</h3>
                 {story.key_points.map((point, index) => (
-                  <p className="key-point" key={index}>âœ“ {point}</p>
+                  <p className="key-point" key={index}>{"\u2022"} {point}</p>
                 ))}
               </article>
             )}
 
             {story.summary && (
               <article className="result-card summary">
-                <h3>ðŸ“ Quick Summary</h3>
+                <h3>Key Points</h3>
                 <p>{story.summary}</p>
               </article>
             )}
@@ -143,27 +143,27 @@ function App() {
         )}
 
         <section className="features" id="about">
-          <div className="feature">
-            <span>ðŸ“š</span>
-            <h3>Simple Explanations</h3>
-            <p>Understand difficult concepts in easy language.</p>
-          </div>
-          <div className="feature">
-            <span>ðŸ’¡</span>
-            <h3>Step-by-step Learning</h3>
-            <p>Break down topics into manageable steps.</p>
-          </div>
-          <div className="feature">
-            <span>âœ¨</span>
-            <h3>AI Powered</h3>
-            <p>Discover a smarter way to learn any subject.</p>
-          </div>
-        </section>
-      </main>
+  <div className="feature">
+    <span>{"\u{1F4D6}"}</span>
+    <h3>Simple Explanations</h3>
+    <p>Understand difficult concepts in easy language.</p>
+  </div>
+  <div className="feature">
+    <span>{"\u{1F3AF}"}</span>
+    <h3>Step-by-step Learning</h3>
+    <p>Break down topics into manageable steps.</p>
+  </div>
+  <div className="feature">
+    <span>{"\u2728"}</span>
+    <h3>AI Powered</h3>
+    <p>Discover a smarter way to learn any subject.</p>
+  </div>
+</section>
+</main>
 
-      <footer>
-        <p>âœ¦ StoryLearn AI â€” Making learning an adventure.</p>
-      </footer>
+<footer>
+  <p>{"\u00A9"} StoryLearn AI</p>
+</footer>
     </div>
   )
 }
