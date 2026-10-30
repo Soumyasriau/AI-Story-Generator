@@ -1,4 +1,4 @@
-
+﻿
 import { useState } from 'react'
 import './App.css'
 
@@ -19,7 +19,7 @@ function App() {
     setStory(null)
 
     try {
-      const response = await fetch('http://localhost:8000/api/generate-story', {
+      const response = await fetch('https://ai-story-generator-10t8.onrender.com/api/generate-story', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic })
@@ -43,7 +43,7 @@ function App() {
     <div className="app">
       <nav className="navbar">
         <a className="brand" href="#">
-          <span className="brand-icon">✦</span>
+          <span className="brand-icon">âœ¦</span>
           StoryLearn <span>AI</span>
         </a>
         <a href="#about" className="nav-link">About</a>
@@ -51,7 +51,7 @@ function App() {
 
       <main>
         <section className="hero">
-          <div className="eyebrow">✦ YOUR PERSONAL AI LEARNING COMPANION</div>
+          <div className="eyebrow">âœ¦ YOUR PERSONAL AI LEARNING COMPANION</div>
 
           <h1>
             Learn anything.
@@ -75,10 +75,10 @@ function App() {
                 placeholder="e.g. Artificial Intelligence, Photosynthesis..."
               />
               <button onClick={generateStory} disabled={loading}>
-                {loading ? 'Generating...' : 'Generate Story →'}
+                {loading ? 'Generating...' : 'Generate Story â†’'}
               </button>
             </div>
-            <p className="hint">✨ Enter any topic and let AI explain it through a story.</p>
+            <p className="hint">âœ¨ Enter any topic and let AI explain it through a story.</p>
           </div>
 
           {loading && (
@@ -99,13 +99,13 @@ function App() {
             </div>
 
             <article className="result-card">
-              <h3>📖 Your Story</h3>
+              <h3>ðŸ“– Your Story</h3>
               <p className="story-text">{story.story}</p>
             </article>
 
             {story.steps?.length > 0 && (
               <article className="result-card">
-                <h3>🧠 Step-by-step Concept Flow</h3>
+                <h3>ðŸ§  Step-by-step Concept Flow</h3>
                 <div className="steps">
                   {story.steps.map((step, index) => (
                     <div className="step" key={index}>
@@ -119,16 +119,16 @@ function App() {
 
             {story.key_points?.length > 0 && (
               <article className="result-card">
-                <h3>⭐ Key Takeaways</h3>
+                <h3>â­ Key Takeaways</h3>
                 {story.key_points.map((point, index) => (
-                  <p className="key-point" key={index}>✓ {point}</p>
+                  <p className="key-point" key={index}>âœ“ {point}</p>
                 ))}
               </article>
             )}
 
             {story.summary && (
               <article className="result-card summary">
-                <h3>📝 Quick Summary</h3>
+                <h3>ðŸ“ Quick Summary</h3>
                 <p>{story.summary}</p>
               </article>
             )}
@@ -144,17 +144,17 @@ function App() {
 
         <section className="features" id="about">
           <div className="feature">
-            <span>📚</span>
+            <span>ðŸ“š</span>
             <h3>Simple Explanations</h3>
             <p>Understand difficult concepts in easy language.</p>
           </div>
           <div className="feature">
-            <span>💡</span>
+            <span>ðŸ’¡</span>
             <h3>Step-by-step Learning</h3>
             <p>Break down topics into manageable steps.</p>
           </div>
           <div className="feature">
-            <span>✨</span>
+            <span>âœ¨</span>
             <h3>AI Powered</h3>
             <p>Discover a smarter way to learn any subject.</p>
           </div>
@@ -162,10 +162,12 @@ function App() {
       </main>
 
       <footer>
-        <p>✦ StoryLearn AI — Making learning an adventure.</p>
+        <p>âœ¦ StoryLearn AI â€” Making learning an adventure.</p>
       </footer>
     </div>
   )
 }
 
 export default App
+
+

@@ -1,4 +1,4 @@
-
+﻿
 import os
 import sys
 from pathlib import Path
@@ -26,6 +26,7 @@ app.add_middleware(
         "http://localhost:5174"
     ],
     allow_credentials=True,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -49,4 +50,5 @@ def create_story(request: StoryRequest):
         return {"topic": topic, "result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
