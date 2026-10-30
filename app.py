@@ -16,7 +16,7 @@ from pdf_generator import generate_pdf
 st.set_page_config(page_title="StoryLearn AI", layout="wide")
 
 # Load CSS
-css_path = Path(__file__).parent / "assets" / "style.css"
+css_path = Path(__file__).parent / "style.css"
 if css_path.exists():
     st.markdown(f"<style>{css_path.read_text()}</style>", unsafe_allow_html=True)
 

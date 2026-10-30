@@ -12,14 +12,17 @@ except Exception:
     pipeline = None
 
 # load .env from the project folder so `HF_API_TOKEN` (or OPENAI_API_KEY) is available
-load_dotenv()
+from pathlib import Path
+
+ENV_PATH = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=ENV_PATH, override=True)
 try:
     import openai
 except Exception:
     openai = None
 
 try:
-    import google.generativeai as genai
+    from google import genai
 except Exception:
     genai = None
 
@@ -43,8 +46,9 @@ def _init_gemini():
     if not api_key:
         raise EnvironmentError("GEMINI_API_KEY not set in environment")
     if genai is None:
-        raise RuntimeError("google-generativeai package not installed")
-    genai.configure(api_key=api_key)
+        raise RuntimeError("google-genai package not installed")
+
+    return genai.Client(api_key=api_key)
 
 
 def _query_hf(prompt: str, model: str, token: str, max_new_tokens: int = 200) -> str:
@@ -108,13 +112,17 @@ def generate_story(topic: str, max_tokens: int = 800) -> Dict[str, Any]:
     hf_model = os.getenv("HF_MODEL", "gpt2")
 
     if gemini_key:
-        _init_gemini()
         try:
-            model = genai.GenerativeModel(gemini_model)
-            response = model.generate_content(prompt)
+            client = _init_gemini()
+            response = client.models.generate_content(
+                model=gemini_model,
+                contents=prompt
+            )
             content = response.text.strip()
         except Exception as e:
             raise RuntimeError(f"Gemini generation failed: {e}")
+    
+   
     elif hf_token:
         # Try hosted HF first; if it fails, fall back to local transformers pipeline (if available)
         try:
