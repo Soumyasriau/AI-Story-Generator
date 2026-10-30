@@ -99,13 +99,13 @@ function App() {
             </div>
 
             <article className="result-card">
-              <h3>ðŸ“– Your Story</h3>
+              <h3>{"\u{1F4D6} Your Story"}</h3>
               <p className="story-text">{story.story}</p>
             </article>
 
             {story.steps?.length > 0 && (
               <article className="result-card">
-                <h3>ðŸ§  Step-by-step Concept Flow</h3>
+                <h3>{"\u{1F9E9} Step-by-step Concept Flow"}</h3>
                 <div className="steps">
                   {story.steps.map((step, index) => (
                     <div className="step" key={index}>
@@ -169,5 +169,6 @@ function App() {
 }
 
 export default App
+
 
 
