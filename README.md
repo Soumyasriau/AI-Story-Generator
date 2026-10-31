@@ -1,51 +1,136 @@
-# StoryLearn AI
+# StoryLearn AI 🚀
 
-StoryLearn AI is a Streamlit app that generates story-style, student-friendly explanations for any topic, fetches relevant educational images, and produces a downloadable PDF.
+**Learn anything. Through stories.**
 
-## Features
-- Story-style, technically accurate explanations via OpenAI
-- Step-by-step concept flow and highlighted key points
-- Automatic download of 3–5 educational images (Bing Image Downloader)
-- PDF export with images (ReportLab)
-- Modern UI styling and responsive layout
+StoryLearn AI is an AI-powered learning platform that transforms complex topics into simple, engaging stories. It uses Google Gemini to generate student-friendly explanations, step-by-step concept flows and key learning points.
 
-## Setup
+🌐 **Live Demo:** https://storylearnai.pages.dev/
 
-1. Create and activate a Python virtual environment (recommended):
+## ✨ Features
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r storylearn_ai\requirements.txt
+- **AI Story Generation:** Convert any topic into an easy-to-understand educational story.
+- **Step-by-Step Learning:** Understand complex concepts through structured explanations.
+- **Key Points:** Get the most important information highlighted.
+- **AI-Powered Learning:** Uses Google Gemini for intelligent content generation.
+- **Responsive Interface:** Clean and user-friendly React interface.
+- **Instant Results:** Generate learning content by entering any topic.
+
+## 🛠️ Technologies Used
+
+| Technology | Purpose |
+|---|---|
+| React.js | Frontend development |
+| Vite | Frontend build tool |
+| Python | Backend development |
+| FastAPI | REST API |
+| Google Gemini | AI story generation |
+| Cloudflare Pages | Frontend deployment |
+| Render | Backend hosting |
+| GitHub | Version control |
+
+## 🏗️ Project Architecture
+
+```text
+StoryLearn-AI/
+│
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx
+│   │   └── App.css
+│   ├── package.json
+│   └── index.html
+│
+├── backend/
+│   └── main.py
+│
+├── ai_engine.py
+├── requirements.txt
+├── .gitignore
+└── README.md
 ```
 
-2. Set your OpenAI API key as an environment variable:
+## ⚙️ Installation and Setup
 
-Windows PowerShell:
+### 1. Clone the repository
 
-```powershell
-$env:OPENAI_API_KEY = "sk-..."
+```bash
+git clone https://github.com/Soumyasriau/AI-Story-Generator.git
+cd AI-Story-Generator
 ```
 
-3. Run the app:
+### 2. Install backend dependencies
 
-```powershell
-streamlit run storylearn_ai\app.py
+```bash
+pip install -r requirements.txt
 ```
 
-## Files
-- `storylearn_ai/app.py`: Streamlit frontend
-- `storylearn_ai/ai_engine.py`: AI generation wrapper
-- `storylearn_ai/image_fetcher.py`: Image downloader
-- `storylearn_ai/pdf_generator.py`: PDF builder using ReportLab
-- `storylearn_ai/assets/style.css`: CSS for modern UI
+### 3. Configure Gemini API
 
-## Notes & Error Handling
-- The app expects `OPENAI_API_KEY` set in the environment.
-- Image downloads rely on `bing-image-downloader`. If network or service fails, the app will continue and still produce text and PDF (possibly without images).
-- The AI is asked to return JSON. If parsing fails, the raw story will still display.
+Create a `.env` file in the project root directory:
 
-## Next steps / Improvements
-- Support additional model providers (Gemini/Llama)
-- Add caching for topic results
-- Add more polished animations and accessibility improvements
+```env
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-3.8-flash
+```
+
+Get your API key from [Google AI Studio](https://aistudio.google.com/).
+
+**Important:** Never upload your `.env` file or API key to GitHub.
+
+### 4. Start the backend
+
+```bash
+python -m uvicorn backend.main:app --reload --port 8000
+```
+
+Backend API documentation:
+
+http://localhost:8000/docs
+
+### 5. Start the frontend
+
+Open another terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## 🌍 Live Deployment
+
+- **Frontend:** https://storylearnai.pages.dev/
+- **Backend API:** https://ai-story-generator-10t8.onrender.com/
+- **API Documentation:** https://ai-story-generator-10t8.onrender.com/docs
+
+## 🔐 Environment Variables
+
+| Variable | Description |
+|---|---|
+| GEMINI_API_KEY | Google Gemini API key |
+| GEMINI_MODEL | Gemini model used for story generation |
+
+## ⚠️ Error Handling
+
+- Gemini API errors are handled by the backend.
+- API quota limits may temporarily prevent story generation.
+- A valid Gemini API key is required.
+- The backend must be running for story generation to work.
+
+## 🚀 Future Enhancements
+
+- Download generated stories as PDF.
+- Text-to-speech functionality.
+- Multiple language support.
+- Story length and difficulty selection.
+- Save and revisit generated stories.
+
+## 👩‍💻 Author
+
+**Soumya**
+
+GitHub: https://github.com/Soumyasriau
+
+---
+
+⭐ If you find StoryLearn AI interesting, consider giving this repository a star!
