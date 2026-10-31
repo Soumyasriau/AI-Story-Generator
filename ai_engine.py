@@ -1,173 +1,228 @@
 import os
+import re
 import json
-from typing import Dict, Any
+from pathlib import Path
+from typing import Dict, Any, List
 
 import requests
 from dotenv import load_dotenv
-from huggingface_hub import InferenceClient
-from typing import Optional
+
 try:
-    from transformers import pipeline
-except Exception:
-    pipeline = None
-
-# load .env from the project folder so `HF_API_TOKEN` (or OPENAI_API_KEY) is available
-from pathlib import Path
-
-ENV_PATH = Path(__file__).resolve().parent / ".env"
-load_dotenv(dotenv_path=ENV_PATH, override=True)
-try:
-    import openai
-except Exception:
-    openai = None
-
+    from huggingface_hub import InferenceClient
+except ImportError:
+    InferenceClient = None
 try:
     from google import genai
-except Exception:
+except ImportError:
     genai = None
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None
+
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env", override=True)
+
+# Words that are never allowed in a topic or in the AI's answer.
+BLOCKED = [
+    "sex", "porn", "nude", "naked", "xxx", "erotic", "nsfw", "fetish",
+    "rape", "incest", "hentai", "onlyfans", "gore", "suicide method",
+]
+
+SAFE_FALLBACK = {
+    "title": "Try another topic",
+    "icon": "📚",
+    "story": "This topic can't be used here. Please enter a school subject such as Photosynthesis, Cricket, Music or the Water Cycle.",
+    "steps": [],
+    "step_icons": [],
+    "summary": "",
+    "key_points": [],
+}
 
 
-# ai_engine.py
-# Responsible for talking to the generative AI model. Prefer Hugging Face
-# Inference API when `HF_API_TOKEN` is present; otherwise fall back to OpenAI.
+def _is_unsafe(text: str) -> bool:
+    t = text.lower()
+    return any(re.search(r"\b" + re.escape(w), t) for w in BLOCKED)
 
 
-def _init_openai():
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise EnvironmentError("OPENAI_API_KEY not set in environment")
-    if openai is None:
-        raise RuntimeError("openai package not installed")
-    openai.api_key = api_key
+def _clean(text: str) -> str:
+    """Remove bullets, numbers and 'Step 1:' labels from the start of a line."""
+    t = str(text).strip()
+    t = re.sub(r"^\s*(?:[-•*]+|\d+[.)])\s*", "", t)
+    t = re.sub(r"^\s*step\s*\d+\s*[:.\-]\s*", "", t, flags=re.IGNORECASE)
+    return t.strip()
 
 
-def _init_gemini():
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise EnvironmentError("GEMINI_API_KEY not set in environment")
-    if genai is None:
-        raise RuntimeError("google-genai package not installed")
+def _prompt(topic: str) -> str:
+    return f"""You are an expert teacher for students aged 10 to 16.
+Keep everything educational, child-safe and age-appropriate.
+If the topic is adult, sexual, violent, hateful or unsafe, reply with exactly: {{"error": "unsafe"}}
 
-    return genai.Client(api_key=api_key)
+Write accurate study notes about the topic below.
+Return ONLY valid JSON, no extra text, no markdown fences:
+{{
+  "title": "short title",
+  "icon": "ONE emoji that represents the topic",
+  "story": "clear explanation in simple English, 5 to 7 sentences, with real facts",
+  "steps": [{{"emoji": "one emoji", "text": "one complete sentence that teaches one fact or idea"}}],
+  "summary": "2 to 3 sentence recap",
+  "key_points": ["5 short factual statements a student should remember for an exam"]
+}}
 
+Rules:
+- Every fact must be correct. Do not guess.
+- Each step must be a full sentence that teaches something real. A step must NOT be a heading or a title.
+- Steps must follow a logical order, from the basic idea to the details. Use 6 to 8 steps.
+- Key points must be facts or definitions. They must NOT be learning goals such as "Understand..." or "Describe...".
+- Do not put numbers, "Step 1:" or bullet symbols in steps or key points.
+- No filler such as "scientists are still learning".
+- Do not repeat the same fact in different places.
 
-def _query_hf(prompt: str, model: str, token: str, max_new_tokens: int = 200) -> str:
-    client = InferenceClient(token=token)
-    params = {"max_new_tokens": max_new_tokens, "temperature": 0.7}
-    res = client.text_generation(model=model, inputs=prompt, parameters=params)
-
-    # Normalize responses: client returns list of dicts or a dict with 'generated_text'
-    if isinstance(res, list) and res and isinstance(res[0], dict) and "generated_text" in res[0]:
-        return res[0]["generated_text"].strip()
-    if isinstance(res, dict) and "generated_text" in res:
-        return res["generated_text"].strip()
-
-    # Fallback: stringify
-    try:
-        return json.dumps(res)
-    except Exception:
-        return str(res)
-
-
-def _local_generate(prompt: str, model: str, max_new_tokens: int = 200) -> str:
-    """Generate text locally with transformers pipeline (CPU)."""
-    if pipeline is None:
-        raise RuntimeError("transformers not installed for local generation")
-
-    # Use text-generation pipeline; model may be a small model (gpt2/distilgpt2) or others
-    gen = pipeline("text-generation", model=model, device=-1)
-    out = gen(prompt, max_new_tokens=max_new_tokens, do_sample=False)
-    if isinstance(out, list) and out and isinstance(out[0], dict) and "generated_text" in out[0]:
-        return out[0]["generated_text"].strip()
-    return str(out)
+Topic: {topic}
+"""
 
 
-def generate_story(topic: str, max_tokens: int = 800) -> Dict[str, Any]:
-    """
-    Generate a structured story-style explanation for `topic`.
-
-    Returns a dict with keys: `story`, `steps`, `summary`, `key_points`.
-    Uses HF Inference API when `HF_API_TOKEN` is set; otherwise uses OpenAI.
-    """
-    if not topic or not topic.strip():
-        raise ValueError("Topic must be a non-empty string")
-
-    # Prompt asks the model to return JSON so downstream parsing is simple
-    prompt = (
-        "You are an expert teacher. Produce a JSON object with keys:"
-        "\n- story: a story-style, technically accurate explanation of the topic in simple language for students"
-        "\n- steps: a list of 6-12 step-by-step conceptual checkpoints or flow items"
-        "\n- summary: a short summary (2-4 sentences)"
-        "\n- key_points: a list of 5 highlighted takeaways"
-        "\nMake the story engaging, keep language simple, and ensure technical accuracy."
-        f"\nTopic: {topic}\nRespond ONLY with valid JSON."
+def _ollama(prompt, max_tokens):
+    r = requests.post(
+        "http://localhost:11434/api/chat",
+        json={
+            "model": "llama3.2",
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+        },
+        timeout=180,
     )
+    r.raise_for_status()
+    return r.json()["message"]["content"].strip()
 
-    # Prefer Gemini if token available
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
-    # Prefer Hugging Face if token available AND Gemini is not set
-    hf_token = os.getenv("HF_API_TOKEN")
-    hf_model = os.getenv("HF_MODEL", "gpt2")
+def _gemini(prompt, max_tokens):
+    if genai is None:
+        raise RuntimeError("google-genai is not installed")
+    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    resp = client.models.generate_content(
+        model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
+        contents=prompt,
+    )
+    return resp.text.strip()
 
-    if gemini_key:
-        try:
-            client = _init_gemini()
-            response = client.models.generate_content(
-                model=gemini_model,
-                contents=prompt
-            )
-            content = response.text.strip()
-        except Exception as e:
-            raise RuntimeError(f"Gemini generation failed: {e}")
-    
-   
-    elif hf_token:
-        # Try hosted HF first; if it fails, fall back to local transformers pipeline (if available)
-        try:
-            content = _query_hf(prompt=prompt, model=hf_model, token=hf_token, max_new_tokens=min(max_tokens, 1024))
-        except Exception as e:
-            # fall back to local model if transformers installed
-            if pipeline is not None:
-                try:
-                    content = _local_generate(prompt, hf_model, max_new_tokens=min(max_tokens, 1024))
-                except Exception as e2:
-                    raise RuntimeError(f"HF generation failed: {e}; local fallback failed: {e2}")
-            else:
-                raise RuntimeError(f"HF generation failed: {e}")
-    else:
-        # Fallback to OpenAI
-        _init_openai()
-        try:
-            resp = openai.ChatCompletion.create(
-                model=os.getenv("OPENAI_MODEL", "gpt-3.5-turbo"),
-                messages=[{"role": "system", "content": "You are a helpful assistant."},
-                          {"role": "user", "content": prompt}],
-                max_tokens=max_tokens,
-                temperature=0.7,
-            )
-            content = resp["choices"][0]["message"]["content"].strip()
-        except Exception as e:
-            raise RuntimeError(f"OpenAI generation failed: {e}")
 
-    # Try to parse JSON. If model included backticks or markdown, try to strip them.
+def _openai(prompt, max_tokens):
+    if OpenAI is None:
+        raise RuntimeError("openai is not installed")
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    resp = client.chat.completions.create(
+        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        messages=[
+            {"role": "system", "content": "You are a safe, accurate teacher for school students."},
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=max_tokens,
+        temperature=0.4,
+    )
+    return resp.choices[0].message.content.strip()
+
+
+def _hf(prompt, max_tokens):
+    if InferenceClient is None:
+        raise RuntimeError("huggingface_hub is not installed")
+    client = InferenceClient(token=os.getenv("HF_API_TOKEN"))
+    resp = client.chat_completion(
+        model=os.getenv("HF_MODEL", "HuggingFaceH4/zephyr-7b-beta"),
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=max_tokens,
+        temperature=0.4,
+    )
+    return resp.choices[0].message.content.strip()
+
+
+def _parse(content: str) -> Dict[str, Any]:
     try:
-        parsed = json.loads(content)
-    except Exception:
-        start = content.find("{")
-        end = content.rfind("}")
-        if start != -1 and end != -1:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        s = content.find("{")
+        e = content.rfind("}")
+        if s != -1 and e != -1:
             try:
-                parsed = json.loads(content[start : end + 1])
-            except Exception:
-                parsed = {"story": content, "steps": [], "summary": "", "key_points": []}
+                return json.loads(content[s:e + 1])
+            except json.JSONDecodeError:
+                pass
+    return {}
+
+
+def generate_story(topic: str, max_tokens: int = 1200) -> Dict[str, Any]:
+    topic = (topic or "").strip()
+    if not topic:
+        raise ValueError("Please enter a topic.")
+    if len(topic) > 80 or _is_unsafe(topic):
+        return dict(SAFE_FALLBACK)
+
+    prompt = _prompt(topic)
+
+    # Providers in order. Each runs only if the earlier ones gave nothing.
+    providers = []
+    if os.getenv("GEMINI_API_KEY"):
+        providers.append(_gemini)
+    if os.getenv("OPENAI_API_KEY"):
+        providers.append(_openai)
+    if os.getenv("HF_API_TOKEN"):
+        providers.append(_hf)
+    providers.append(_ollama)  # local only; fails quietly on a server
+
+    print("[ai] providers to try:", [p.__name__ for p in providers])
+
+    data = {}
+    errors = []
+    for fn in providers:
+        try:
+            data = _parse(fn(prompt, max_tokens))
+            if data:
+                print("[ai] used:", fn.__name__)
+                break
+            errors.append(f"{fn.__name__}: reply was not valid JSON")
+            print("[ai]", fn.__name__, "gave no valid JSON")
+        except Exception as e:
+            errors.append(f"{fn.__name__}: {e}")
+            print("[ai]", fn.__name__, "FAILED:", e)
+
+    if not data:
+        print("AI ERRORS:", errors)
+        out = dict(SAFE_FALLBACK)
+        out["title"] = topic
+        out["story"] = (
+            "The AI service is not available right now. Details: "
+            + ("; ".join(errors)[:400] if errors else "no provider is set up")
+        )
+        return out
+
+    if data.get("error") == "unsafe":
+        return dict(SAFE_FALLBACK)
+
+    # Normalise the answer into the format the app expects.
+    steps: List[str] = []
+    icons: List[str] = []
+    for s in data.get("steps", []):
+        if isinstance(s, dict):
+            text = _clean(s.get("text", ""))
+            emoji = str(s.get("emoji", "🔹")).strip()[:4] or "🔹"
         else:
-            parsed = {"story": content, "steps": [], "summary": "", "key_points": []}
+            text = _clean(s)
+            emoji = "🔹"
+        if text:
+            steps.append(text)
+            icons.append(emoji)
 
-    # Ensure keys exist
-    for k in ["story", "steps", "summary", "key_points"]:
-        if k not in parsed:
-            parsed[k] = [] if k in ("steps", "key_points") else ""
+    result = {
+        "title": str(data.get("title") or topic),
+        "icon": str(data.get("icon") or "📚")[:4],
+        "story": str(data.get("story", "")),
+        "steps": steps,
+        "step_icons": icons,
+        "summary": str(data.get("summary", "")),
+        "key_points": [_clean(k) for k in data.get("key_points", []) if _clean(k)],
+    }
 
-    return parsed
+    # Final check: if the AI's answer contains a blocked word, do not show it.
+    if _is_unsafe(json.dumps(result)):
+        return dict(SAFE_FALLBACK)
+
+    return result

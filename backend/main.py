@@ -1,4 +1,3 @@
-
 import os
 import sys
 from pathlib import Path
@@ -10,7 +9,7 @@ from pydantic import BaseModel
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
-# Load the main project's .env before importing ai_engine
+# Load the main project's .env before importing ai_engine (local only)
 load_dotenv(ROOT_DIR / ".env", override=True)
 
 sys.path.insert(0, str(ROOT_DIR))
@@ -23,7 +22,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "http://localhost:5174"
+        "http://localhost:5174",
     ],
     allow_credentials=True,
     allow_origin_regex=r"https://.*\.(vercel\.app|pages\.dev)",
@@ -31,12 +30,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 class StoryRequest(BaseModel):
     topic: str
+
 
 @app.get("/")
 def home():
     return {"message": "StoryLearn AI API is running!"}
+
 
 @app.post("/api/generate-story")
 def create_story(request: StoryRequest):
@@ -44,11 +46,13 @@ def create_story(request: StoryRequest):
 
     if not topic:
         raise HTTPException(status_code=400, detail="Topic is required")
+    if len(topic) > 80:
+        raise HTTPException(status_code=400, detail="Topic is too long")
 
     try:
         result = generate_story(topic)
+        # No pictures at all. Only text and emojis are sent.
+        result["images"] = []
         return {"topic": topic, "result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-

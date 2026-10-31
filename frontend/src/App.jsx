@@ -1,6 +1,9 @@
-
 import { useState } from 'react'
 import './App.css'
+
+const API_URL = 'https://ai-story-generator-10t8.onrender.com/api/generate-story'
+// For local testing, change the line above to:
+// const API_URL = 'http://localhost:8000/api/generate-story'
 
 function App() {
   const [topic, setTopic] = useState('')
@@ -19,7 +22,7 @@ function App() {
     setStory(null)
 
     try {
-      const response = await fetch('https://ai-story-generator-10t8.onrender.com/api/generate-story', {
+      const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic })
@@ -38,6 +41,11 @@ function App() {
       setLoading(false)
     }
   }
+
+  // Only show pictures the backend has already checked and sent as image data.
+  const safeImages = (story?.images || []).filter(
+    (src) => typeof src === 'string' && src.startsWith('data:image/')
+  )
 
   return (
     <div className="app">
@@ -95,13 +103,24 @@ function App() {
           <section className="results">
             <div className="result-heading">
               <span className="result-tag">YOUR AI-GENERATED LESSON</span>
-              <h2>{topic}</h2>
+              <h2>{story.title || topic}</h2>
             </div>
 
             <article className="result-card">
               <h3>{"\u{1F4D6} Your Story"}</h3>
               <p className="story-text">{story.story}</p>
             </article>
+
+            {safeImages.length > 0 && (
+              <article className="result-card">
+                <h3>{"\u{1F5BC}\uFE0F Pictures"}</h3>
+                <div className="gallery">
+                  {safeImages.map((src, index) => (
+                    <img key={index} src={src} alt={`${topic} picture ${index + 1}`} />
+                  ))}
+                </div>
+              </article>
+            )}
 
             {story.steps?.length > 0 && (
               <article className="result-card">
@@ -110,7 +129,10 @@ function App() {
                   {story.steps.map((step, index) => (
                     <div className="step" key={index}>
                       <span>{index + 1}</span>
-                      <p>{step}</p>
+                      <p>
+                        {story.step_icons?.[index] ? story.step_icons[index] + ' ' : ''}
+                        {step}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -128,7 +150,7 @@ function App() {
 
             {story.summary && (
               <article className="result-card summary">
-                <h3>Key Points</h3>
+                <h3>Summary</h3>
                 <p>{story.summary}</p>
               </article>
             )}
@@ -143,32 +165,29 @@ function App() {
         )}
 
         <section className="features" id="about">
-  <div className="feature">
-    <span>{"\u{1F4D6}"}</span>
-    <h3>Simple Explanations</h3>
-    <p>Understand difficult concepts in easy language.</p>
-  </div>
-  <div className="feature">
-    <span>{"\u{1F3AF}"}</span>
-    <h3>Step-by-step Learning</h3>
-    <p>Break down topics into manageable steps.</p>
-  </div>
-  <div className="feature">
-    <span>{"\u2728"}</span>
-    <h3>AI Powered</h3>
-    <p>Discover a smarter way to learn any subject.</p>
-  </div>
-</section>
-</main>
+          <div className="feature">
+            <span>{"\u{1F4D6}"}</span>
+            <h3>Simple Explanations</h3>
+            <p>Understand difficult concepts in easy language.</p>
+          </div>
+          <div className="feature">
+            <span>{"\u{1F3AF}"}</span>
+            <h3>Step-by-step Learning</h3>
+            <p>Break down topics into manageable steps.</p>
+          </div>
+          <div className="feature">
+            <span>{"\u2728"}</span>
+            <h3>AI Powered</h3>
+            <p>Discover a smarter way to learn any subject.</p>
+          </div>
+        </section>
+      </main>
 
-<footer>
-  <p>{"\u00A9"} StoryLearn AI</p>
-</footer>
+      <footer>
+        <p>{"\u00A9"} StoryLearn AI</p>
+      </footer>
     </div>
   )
 }
 
 export default App
-
-
-
